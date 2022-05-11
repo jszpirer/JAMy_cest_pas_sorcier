@@ -63,6 +63,8 @@ tr_set_complete_oh <- dummy_cols(training_set_features,
                                  select_columns = factor_col_names,
                                  ignore_na = T,
                                  remove_selected_columns = T)
+dim(tr_set_complete_oh)
+# 115 features, seems ok for now but might have drawbacks
 # -> mal fait, on a besoin d'utiliser split=',' sur les household_incomes
 # Attention, peut pas utiliser split=',' sur census_msa
 
@@ -98,50 +100,48 @@ summary(tr_set_noNA_mode)
 
 ## Second try : replace using RF rfImpute method
 
-tr_set_rf_imputed <- rfImpute(training_set_labels[, c(2)] ~ ., tr_set_encoded)
-# tr_set_rf_imputed <- rfImpute(tr_set_encoded, cbind(tr_set_encoded, training_set_labels))
+# tr_set_rf_imputed <- rfImpute(training_set_labels[, c(2)] ~ ., tr_set_encoded)
+tr_set_rf_imputed <- rfImpute(tr_set_encoded, merge(tr_set_encoded, training_set_labels, by.y = "respondent_id"))
 
 ## Third try : replace using NMF (non negative matrix factorization)
 # For every column with missing value
 # We select columns containing no missing values
 
 # install.packages("NMFN")
-library(NMFN)
-
-tr_set_remove_NA<- na.omit(tr_set_useful)
-N <- nrow(tr_set_remove_NA)
-n <- ncol(tr_set_remove_NA)
-
-
+# library(NMFN)
+# 
+# tr_set_remove_NA<- na.omit(tr_set_useful)
+# N <- nrow(tr_set_remove_NA)
+# n <- ncol(tr_set_remove_NA)
 
 # k fold validation of our NMF model
-
-CV_folds <- 10
-size_CV <-floor(N/CV_folds)
-CV_err<-numeric(CV_folds)
-
-for (i in 1:CV_folds) {
-    idx_ts<-(((i-1)*size_CV+1):(i*size_CV))  ### idx_ts represents the indices of the test set the i-th fold
-    X_ts<-X[idx_ts,]  
-    Y_ts<-Y[idx_ts]  
-    
-    idx_tr<-setdiff(1:N,idx_ts) ### idx_tr represents  indices of the training sefor the i-th fold
-    X_tr<-X[idx_tr,]
-    Y_tr<-Y[idx_tr]                          
-    
-    DS<-cbind(X_tr,imdb_score=Y_tr)
-    
-    # Model fit (using lm function)
-    model<- lm(imdb_score~.,DS)
-    
-    # Model prediction 
-    Y_hat_ts<- predict(model,X_ts)
-    
-    # Cross validation error = Mean Squared Error
-    CV_err[i]<-mean((Y_hat_ts-Y_ts)^2)
-}
-
-
-print(paste("CV error=",round(mean(CV_err),digits=4), " ; std dev=",round(sd(CV_err),digits=4)))
-
-CV_err_lm_single_model <- CV_err
+# 
+# CV_folds <- 10
+# size_CV <-floor(N/CV_folds)
+# CV_err<-numeric(CV_folds)
+# 
+# for (i in 1:CV_folds) {
+#     idx_ts<-(((i-1)*size_CV+1):(i*size_CV))  ### idx_ts represents the indices of the test set the i-th fold
+#     X_ts<-X[idx_ts,]  
+#     Y_ts<-Y[idx_ts]  
+#     
+#     idx_tr<-setdiff(1:N,idx_ts) ### idx_tr represents  indices of the training sefor the i-th fold
+#     X_tr<-X[idx_tr,]
+#     Y_tr<-Y[idx_tr]                          
+#     
+#     DS<-cbind(X_tr,imdb_score=Y_tr)
+#     
+#     # Model fit (using lm function)
+#     model<- lm(imdb_score~.,DS)
+#     
+#     # Model prediction 
+#     Y_hat_ts<- predict(model,X_ts)
+#     
+#     # Cross validation error = Mean Squared Error
+#     CV_err[i]<-mean((Y_hat_ts-Y_ts)^2)
+# }
+# 
+# 
+# print(paste("CV error=",round(mean(CV_err),digits=4), " ; std dev=",round(sd(CV_err),digits=4)))
+# 
+# CV_err_lm_single_model <- CV_err
