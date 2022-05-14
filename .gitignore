@@ -3,3 +3,6 @@
 /training_set_features.csv
 /training_set_labels.csv
 
+.RData
+.Rhistory
+.ipynb_*

@@ -53,9 +53,6 @@ factor_variables
 factor_col_names <- colnames(factor_variables)
 data_factor<-training_set_features[,factor_variables]
 dim(data_factor)
-# data_preprocessed<-training_set_features[,-factor_variables]
-# head(data_preprocessed)
-# dim(data_preprocessed)
 
 # First try : complete oh encoding for factors
 
@@ -81,7 +78,6 @@ tr_set_encoded <- tr_set_complete_oh
 # install.packages("DescTools")
 library("DescTools") # For Mode function
 
-
 replace_na_with_mean_value<-function(vec) {
     mean_vec <- mean(as.numeric(vec), na.rm=TRUE)
     vec[is.na(vec)]<-mean_vec
@@ -101,47 +97,139 @@ summary(tr_set_noNA_mode)
 ## Second try : replace using RF rfImpute method
 
 # tr_set_rf_imputed <- rfImpute(training_set_labels[, c(2)] ~ ., tr_set_encoded)
-tr_set_rf_imputed <- rfImpute(tr_set_encoded, merge(tr_set_encoded, training_set_labels, by.y = "respondent_id"))
+# tr_set_rf_imputed <- rfImpute(tr_set_encoded, merge(tr_set_encoded, training_set_labels, by.y = "respondent_id"))
 
-## Third try : replace using NMF (non negative matrix factorization)
-# For every column with missing value
-# We select columns containing no missing values
+tr_set_rf_imputed <- read.csv("tr_set_rf_imputed.csv")
 
-# install.packages("NMFN")
-# library(NMFN)
-# 
-# tr_set_remove_NA<- na.omit(tr_set_useful)
-# N <- nrow(tr_set_remove_NA)
-# n <- ncol(tr_set_remove_NA)
+install.packages("caret")
+library("caret")
 
-# k fold validation of our NMF model
-# 
-# CV_folds <- 10
-# size_CV <-floor(N/CV_folds)
-# CV_err<-numeric(CV_folds)
-# 
-# for (i in 1:CV_folds) {
-#     idx_ts<-(((i-1)*size_CV+1):(i*size_CV))  ### idx_ts represents the indices of the test set the i-th fold
-#     X_ts<-X[idx_ts,]  
-#     Y_ts<-Y[idx_ts]  
-#     
-#     idx_tr<-setdiff(1:N,idx_ts) ### idx_tr represents  indices of the training sefor the i-th fold
-#     X_tr<-X[idx_tr,]
-#     Y_tr<-Y[idx_tr]                          
-#     
-#     DS<-cbind(X_tr,imdb_score=Y_tr)
-#     
-#     # Model fit (using lm function)
-#     model<- lm(imdb_score~.,DS)
-#     
-#     # Model prediction 
-#     Y_hat_ts<- predict(model,X_ts)
-#     
-#     # Cross validation error = Mean Squared Error
-#     CV_err[i]<-mean((Y_hat_ts-Y_ts)^2)
-# }
-# 
-# 
-# print(paste("CV error=",round(mean(CV_err),digits=4), " ; std dev=",round(sd(CV_err),digits=4)))
-# 
-# CV_err_lm_single_model <- CV_err
+# normalizing data
+ss <- preProcess(as.data.frame(tr_set_rf_imputed), method=c("range"))
+gfg <- predict(ss, as.data.frame(tr_set_rf_imputed))
+gfg
+
+
+#### Random forests
+
+library(randomForest)
+
+N <- nrow(X) # Nb of training examples
+n <- ncol(X) # Nb of input variables
+
+shuff_idx <- sample(1:N)
+half_split <- floor(N/2) # Splitting data for training / testing
+
+X <- tr_set_rf_imputed[,-c(1)]  # Remove respond_id of features
+Y <- training_set_labels[,-c(1)] # Work on h1n1 vaccine
+
+X_tr <- X[shuff_idx[1:half_split],]
+Y_tr <- Y[shuff_idx[1:half_split],]
+
+X_ts <- X[shuff_idx[(half_split+1):N],]
+Y_ts <- Y[shuff_idx[(half_split+1):N],]
+
+n_trees <- 10
+accuracy_vec <- matrix(0, n_trees, 4)
+threshold = 0.9  # Arbitrary
+
+for (i in 10:n_trees) {
+    print(paste("Model for", i, "trees"))
+    # Model fit (using randomForest function)
+    
+    model_h1n1 <- randomForest(x=X_tr,
+                               y=Y_tr[, c(1)], # as.factor so RF knows it's a classification problem
+                               xtest=X_ts,
+                               ytest=Y_ts[, c(1)],
+                               ntree=i)
+    
+    model_season <- randomForest(x=X_tr,
+                               y=Y_tr[, c(2)], # as.factor so RF knows it's a classification problem
+                               xtest=X_ts,
+                               ytest=Y_ts[, c(2)],
+                               ntree=i)
+    
+    
+    model_sum <- randomForest(x=X_tr,
+                          y=Y_tr[, c(1)] + Y_tr[, c(2)], # as.factor so RF knows it's a classification problem
+                          xtest=X_ts,
+                          ytest=Y_ts[, c(1)] + Y_ts[, c(2)],
+                          ntree=i)
+    
+    model_diff <- randomForest(x=X_tr,
+                         y=Y_tr[, c(1)] - Y_tr[, c(2)], # as.factor so RF knows it's a classification problem
+                         xtest=X_ts,
+                         ytest=Y_ts[, c(2)] - Y_ts[, c(1)],
+                         ntree=i)
+    # 
+    Y1_hat = model_h1n1$test$predicted
+    # Y1_hat <- ifelse(Y1_hat > threshold, 1, 0) 
+    # 
+    # confusion_1 <- table(Y1_hat, Y_ts[,c(1)])
+    h1n1_hat = (model_sum$test$predicted - model_diff$test$predicted)/2
+    # h1n1_hat <- ifelse(h1n1_hat > threshold, 1, 0) 
+    # confusion_h1n1 <- table(h1n1_hat, Y_ts[,c(1)])
+    # 
+    Y2_hat = model_season$test$predicted
+    # Y2_hat <- ifelse(Y2_hat > threshold, 1, 0) 
+    # 
+    # confusion_2 <- table(Y2_hat, Y_ts[,c(2)])
+    seasonal_hat = (model_sum$test$predicted + model_diff$test$predicted)/2
+    # seasonal_hat <- ifelse(seasonal_hat > threshold, 1, 0) 
+    # confusion_seasonal <- table(seasonal_hat, Y_ts[,c(2)])
+    # 
+    # # Accuracy of h1n1 
+    # accuracy_vec[i, 1] = (confusion_h1n1[1,1] + confusion_h1n1[2,2]) / sum(confusion_h1n1)
+    # accuracy_vec[i, 2] = (confusion_1[1,1] + confusion_1[2,2]) / sum(confusion_1)
+    # # Accuracy of seasonal
+    # accuracy_vec[i, 3] = (confusion_seasonal[1,1] + confusion_seasonal[2,2]) / sum(confusion_seasonal)
+    # accuracy_vec[i, 4] = (confusion_2[1,1] + confusion_2[2,2]) / sum(confusion_2)
+    # 
+}
+
+par(mfrow=c(1,2))
+plot(accuracy_vec[,1],main = "Number of trees influence on h1n1, mixed meth",xlab = "Nbr of trees",ylab = "Classification rate") 
+plot(accuracy_vec[,2],main = "Number of trees influence on h1n1, classic",xlab = "Nbr of trees",ylab = "Classification rate") 
+confusion_1
+par(mfrow=c(1,2))
+
+plot(accuracy_vec[,3],main = "Number of trees influence on seasonal, mixed",xlab = "Nbr of trees",ylab = "Classification rate") 
+plot(accuracy_vec[,4],main = "Number of trees influence on seasonal, class",xlab = "Nbr of trees",ylab = "Classification rate")
+confusion_2
+
+thresholds <- seq(0,0.99,0.05)
+FPR <- c()
+TPR <- c()
+Y_pred <- Y1_hat
+Y <- Y_ts[, c(1)]
+for(threshold in thresholds){
+    Y_hat <- ifelse(Y_pred > threshold,1,0) 
+    confusion_matrix <- table(Y_hat,Y)
+    
+    if(dim(confusion_matrix)[1] < 2){ # Their is a possibility of having no spam/non spam elements in Y_hat -> we make the matrix the right size
+        if(rownames(confusion_matrix) == 0){
+            confusion_matrix <- rbind(confusion_matrix,c(0,0))
+            rownames(confusion_matrix)[2] <- "1"
+        }
+        if(rownames(confusion_matrix) == 1){
+            confusion_matrix <- rbind(c(0,0),confusion_matrix)
+            rownames(confusion_matrix)[1] <- "0"
+        }
+    }
+    
+    FP <- confusion_matrix[2,1] # False positive
+    TP <- confusion_matrix[2,2] # True positive
+    N_N <- sum(confusion_matrix[,1]) # Total number of non vaccined
+    N_P <- sum(confusion_matrix[,2]) # Total number of vaccined
+    
+    FPR <- c(FPR,FP/N_N)
+    TPR <- c(TPR,TP/N_P)
+}
+
+plot(FPR,TPR)
+lines(FPR,TPR,col="blue")
+lines(thresholds,thresholds,lty=2)
+title("ROC Curve")
+AUC <- sum(abs(diff(FPR)) * (head(TPR,-1)+tail(TPR,-1)))/2
+AUC
+
