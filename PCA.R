@@ -116,9 +116,29 @@ for (i in 2:n){
 
 features_to_throw_3
 
-#select only the interresting columns for the output 2 and save it
+#select only the interresting columns for the output 3 and save it
 data_preprocessed_3<-subset(data_preprocessed, select = -c(features_to_throw_3))
 dim(data_preprocessed_3)
-
+S
 write.csv(data_preprocessed_3, "tr_set_preprocessed_3")
 
+features_to_keep<-c(1)
+features_to_throw<-c()
+for (i in 2:n){
+  a<-CV_error_mean_3 [i-1]-CV_error_mean_3[i]
+  b<-CV_error_mean_2 [i-1]-CV_error_mean_2[i]
+  if ((0.5*a+0.5*b) > 0.0005){
+    features_to_keep<- c(features_to_keep, i)
+  }
+  else{
+    features_to_throw<-c(features_to_throw, i)
+  }
+}
+
+features_to_throw
+
+#select only the interresting columns for the output 3 and save it
+data_preprocessed_tot<-subset(data_preprocessed, select = -c(features_to_throw))
+dim(data_preprocessed_tot)
+
+write.csv(data_preprocessed_tot, "tr_set_preprocessed")
