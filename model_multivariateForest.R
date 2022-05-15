@@ -28,5 +28,9 @@ trainY <- as.matrix(train_data[,targets])
 testX <- as.matrix(test_data[,-targets])
 
 
-Prediction=build_forest_predict(trainX, trainY, n_tree, m_feature, min_leaf,testX)
+Prediction <- build_forest_predict(trainX, trainY, n_tree, m_feature, min_leaf,testX)
 Prediction
+# On met un threshold sur la prédiction pour avoir des 0 et des 1
+testY <- ifelse(Prediction > 0.5, 1, 0)
+confusion_matrix <- table(testY,test_data[,targets])
+confusion_matrix
