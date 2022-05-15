@@ -7,3 +7,4 @@
 .RData
 .Rhistory
 .ipynb_*
+.Rproj.user/**
