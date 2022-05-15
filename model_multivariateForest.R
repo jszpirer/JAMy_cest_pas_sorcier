@@ -1,5 +1,5 @@
 #install.packages("MultivariateRandomForest")
-training_features <- read.csv("tr_set_rf_imputed.csv", stringsAsFactors = T)
+training_features <- read.csv("tr_set_rf_imputed.csv")
 training_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
 label_1 <- training_set_labels[,"h1n1_vaccine"]
 label_2 <- training_set_labels[, "seasonal_vaccine"]
@@ -15,10 +15,18 @@ test_data <- total_train_set[vaccine_idx[(half_split+1):nrow(total_train_set)],]
 #On peut commencer la multivariate random forest
 library(MultivariateRandomForest)
 #Input and Output Feature Matrix of random data (created using runif)
-n_tree=1
+n_tree=2
 m_feature=5
-min_leaf=4
+min_leaf=5
 #Prediction size is 10 x 5, where 10 is the number
 #of testing samples and 5 is the number of output features
-Prediction=build_forest_predict(train_data[,-c(labels)], as.factor(train_data[,c(labels)]), n_tree, m_feature, min_leaf,test_data[,-c(labels)])
+
+target_idx <- ncol(train_data)
+targets <- c(target_idx, target_idx-1)
+trainX <- as.matrix(train_data[,-targets])
+trainY <- as.matrix(train_data[,targets])
+testX <- as.matrix(test_data[,-targets])
+
+
+Prediction=build_forest_predict(trainX, trainY, n_tree, m_feature, min_leaf,testX)
 Prediction
