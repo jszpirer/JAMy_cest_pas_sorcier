@@ -38,16 +38,16 @@ cat("Test set     : ", dim(test_set_features[,-useful_nas])[1], "->",
     dim(na.omit(test_set_features[,-useful_nas]))[1], "\n")
 cat("Training labs: ", dim(training_set_labels)[1], "->", dim(na.omit(training_set_labels))[1])
 
-### On va gérer ça en même temps que les categorical variables en faisant un one hot encoding avec NA comme possibilité
+### On va gÃ©rer Ã§a en mÃªme temps que les categorical variables en faisant un one hot encoding avec NA comme possibilitÃ©
 
 
 # Apd mtn on gere les missing values pour le tr et ts en un seul ds
-#### On constate que certaines catégories auraient pu être encodées par des nombres 
+#### On constate que certaines catÃ©gories auraient pu Ãªtre encodÃ©es par des nombres 
 # car il y a une progression logique$
 
-# Pour pouvoir les reséparer plus tard
-tr_indexes <- training_set_features[, "respondent_id"]
-ts_indexes <- test_set_features[, "respondent_id"]
+# Pour pouvoir les resÃ©parer plus tard
+tr_indexes <- 1:nrow(training_set_features)
+ts_indexes <- (nrow(training_set_features)+1):(nrow(training_set_features) + nrow(test_set_features))
 
 features_set <- rbind(training_set_features, test_set_features)
 
@@ -94,41 +94,41 @@ summary(features_set[, numeric_variables_idx])
 
 # Define the function that will compute nmf
 nfm_mult_upd <- function(R, K, missing_idx, maxit=800, eps=2.2204e-16) {
-  # Using weighted multiplicative rule Zhu 2016
-  # init random W and H
-  print(paste("[INFO] : NMF with k=", K))
-  R <- as.matrix(R)
-  I <- dim(R)[1]
-  J <- dim(R)[2]
-  M <- matrix(1, nrow = dim(R)[1], ncol = dim(R)[2])
-  M[missing_idx] <- 0
-  X <- R # Store original R
-  R <- R*M
-  W <- matrix(runif(I*K), nrow = I, ncol = K)
-  H <- matrix(runif(K*J), nrow = K, ncol = J)
-  
-  n <- 0
-  d1 <- 1000
-  d2 <- 1000
-  while(n < maxit && !(d1 < eps && d2 < eps)) {
-    if (n %% 100 == 0) {
-      print(paste("[INFO] : iter", n, " Relative error is :", distance2(X, W%*%H)/distance2(X, R*0)))
+    # Using weighted multiplicative rule Zhu 2016
+    # init random W and H
+    print(paste("[INFO] : NMF with k=", K))
+    R <- as.matrix(R)
+    I <- dim(R)[1]
+    J <- dim(R)[2]
+    M <- matrix(1, nrow = dim(R)[1], ncol = dim(R)[2])
+    M[missing_idx] <- 0
+    X <- R # Store original R
+    R <- R*M
+    W <- matrix(runif(I*K), nrow = I, ncol = K)
+    H <- matrix(runif(K*J), nrow = K, ncol = J)
+    
+    n <- 0
+    d1 <- 1000
+    d2 <- 1000
+    while(n < maxit && !(d1 < eps && d2 < eps)) {
+        if (n %% 100 == 0) {
+            print(paste("[INFO] : iter", n, " Relative error is :", distance2(X, W%*%H)/distance2(X, R*0)))
+        }
+        newH <- H* (t(W) %*% R) / (t(W) %*% W %*% H)
+        newW <- W*(R %*% t(newH)) / ((W %*% newH) %*% t(newH))
+        
+        d1 <- distance2(newH, H)
+        d2 <- distance2(newW, W)
+        
+        H <- newH
+        W <- newW
+        n <- n+1
     }
-    newH <- H* (t(W) %*% R) / (t(W) %*% W %*% H)
-    newW <- W*(R %*% t(newH)) / ((W %*% newH) %*% t(newH))
     
-    d1 <- distance2(newH, H)
-    d2 <- distance2(newW, W)
-    
-    H <- newH
-    W <- newW
-    n <- n+1
-  }
-  
-  Res <- W%*%H
-  #Res[missing_idx] <- X[missing_idx]
-  nmf <- list("res"=Res, "dst"=distance2(R, Res)/distance2(R, 0))
-  return(nmf)
+    Res <- W%*%H
+    #Res[missing_idx] <- X[missing_idx]
+    nmf <- list("res"=Res, "dst"=distance2(R, Res)/distance2(R, 0))
+    return(nmf)
 }
 
 
@@ -136,9 +136,9 @@ nfm_mult_upd <- function(R, K, missing_idx, maxit=800, eps=2.2204e-16) {
 N <- 14
 
 replace_na_with_mean_value<-function(vec) {
-  mean_vec <- mean(as.numeric(vec), na.rm=TRUE)
-  vec[is.na(vec)]<-mean_vec
-  vec
+    mean_vec <- mean(as.numeric(vec), na.rm=TRUE)
+    vec[is.na(vec)]<-mean_vec
+    vec
 }
 
 X<-data.frame(apply(features_set[, numeric_variables_idx], MARGIN=2, replace_na_with_mean_value))
@@ -156,26 +156,26 @@ kN = min(abs(rX + N/2), dim(X)[1], dim(X)[2])
 X_hat = array(0, dim = c(kN-k1+1, nrow(X), ncol(X)))
 dim(X_hat)
 for (K in k1:kN) {
-  # compute NMF
-  nmf <- nfm_mult_upd(X, K, missing_idx = miss_idx, maxit=800)
-  print(paste("Computed nmf, final dist is", nmf$dst))
-  X_hat[K-k1+1,,] <- nmf$res
+    # compute NMF
+    nmf <- nfm_mult_upd(X, K, missing_idx = miss_idx, maxit=800)
+    print(paste("Computed nmf, final dist is", nmf$dst))
+    X_hat[K-k1+1,,] <- nmf$res
 }
 
 
 # 3: weighted reconstruction
 d = array(0, dim = c(kN-k1+1))
 for (K in 1:(kN-k1+1)) {
-  # Reconstruction error based on non missing values
-  d[K] <- sum(abs(X_hat[K,,][non_miss_idx] - X[non_miss_idx]))/nrow(non_miss_idx)
+    # Reconstruction error based on non missing values
+    d[K] <- sum(abs(X_hat[K,,][non_miss_idx] - X[non_miss_idx]))/nrow(non_miss_idx)
 }
 
 X_hat_f <- matrix(0, nrow = nrow(X), ncol = ncol(X))
 denum <- 0
 for (K in 1:(kN-k1+1)) {
-  # Reconstruction matrix
-  X_hat_f <- X_hat_f + exp(-d[K])*X_hat[K,,]
-  denum <- denum + exp(-d[K])
+    # Reconstruction matrix
+    X_hat_f <- X_hat_f + exp(-d[K])*X_hat[K,,]
+    denum <- denum + exp(-d[K])
 }
 X_hat_f <- X_hat_f / sum(exp(-d))
 
@@ -195,9 +195,9 @@ library(missForest)
 
 X2 <- features_set[, numeric_variables_idx]
 results <- missForest(X2,
-                      maxiter=5,
-                      variablewise=T,
-                      verbose=T)
+           maxiter=5,
+           variablewise=T,
+           verbose=T)
 
 
 ##################################################################
@@ -206,7 +206,7 @@ results <- missForest(X2,
 
 
 # First try : complete oh encoding for factors
-# On considère pour toutes les features de type factor que missing value est une info, on va impute que les values num
+# On considÃ¨re pour toutes les features de type factor que missing value est une info, on va impute que les values num
 # tr_set_complete_oh <- dummy_cols(training_set_features,
 #                                  select_columns = factor_col_names,
 #                                  ignore_na = F,
@@ -222,7 +222,7 @@ results <- missForest(X2,
 # -> mal fait, on a besoin d'utiliser split=',' sur les household_incomes
 # Attention, peut pas utiliser split=',' sur census_msa
 
-# On change les trois indices avec bcp de na pour ajouter la donnée "na" comme étant une information
+# On change les trois indices avec bcp de na pour ajouter la donnÃ©e "na" comme Ã©tant une information
 useful_nas <- which(sapply(test_set_features, function(x) sum(is.na(x))) > 10000)
 
 library(fastDummies)
@@ -232,13 +232,13 @@ features_set <- dummy_cols(features_set,
 
 
 dim(features_set)
-# note : du coup on a déjà géré les factors pour empl industry et empl status
+# note : du coup on a dÃ©jÃ  gÃ©rÃ© les factors pour empl industry et empl status
 
 
 ## Change NAs to 0 for the new health_insurance one hot encoded columns
 replace_na_with_0<-function(vec) {
-  vec[is.na(vec)]<-0
-  vec
+    vec[is.na(vec)]<-0
+    vec
 }
 
 useful_nas_feat_idx <- c(grep("health_insurance_*", colnames(features_set)))
@@ -266,7 +266,6 @@ features_set_int_encoded <- replace_na_with_0(features_set_int_encoded)
 tr_set_enc <- features_set_int_encoded[tr_indexes,]
 ts_set_enc <- features_set_int_encoded[ts_indexes,]
 
-
 summary(features_set_int_encoded)
 
 dim(tr_set_enc)
@@ -291,7 +290,7 @@ write.csv(ts_set_enc, "ts_set_imputed.csv")
 ##############
 ##### Missing values imputation
 ###############
-# Mtn que les données ont une forme exploitable on peut gérer les missing values
+# Mtn que les donnÃ©es ont une forme exploitable on peut gÃ©rer les missing values
 # select which training set encoding to use (si on en a fait plusieurs)
 # tr_set_encoded <- tr_set_int_encoding
 # ts_set_encoded <- ts_set_int_encoding
