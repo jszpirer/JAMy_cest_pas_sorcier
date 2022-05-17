@@ -1,5 +1,6 @@
 # D'abord on met tout ensemble pour avoir un tableau avec features+labels
-training_features <- read.csv("tr_set_preprocessed.csv")
+total_training_features <- read.csv("tr_set_imputed.csv")
+training_features <- total_training_features[,c(4, 5, 6, 7, 9, 10, 13, 15, 16, 20, 21, 33, 34, 35, 37, 40)]
 summary(training_features)
 training_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
 label_1 <- training_set_labels[,"h1n1_vaccine"]
