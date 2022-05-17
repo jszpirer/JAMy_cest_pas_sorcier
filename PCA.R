@@ -19,7 +19,7 @@ CV_err<-matrix(0,nrow=n,ncol=CV_folds)
 Y<- training_set_labels[,2]
 
 # Compute PCA 
-X_pca<-data.frame(prcomp(data_preprocessed[, -c(1, 2)],retx=T)$x)
+X_pca<-data.frame(prcomp(data_preprocessed,retx=T)$x)
 
 for (i in 1:CV_folds) {
     print(paste("Fold number", i))
@@ -32,6 +32,7 @@ for (i in 1:CV_folds) {
   Y_tr<-Y[idx_tr]
   
   for (nb_components in 1:n) {
+      print(paste("Component number", nb_components))
     # Create a dataset including only the first nb_components principal components
     DS<-cbind(X_tr[,1:nb_components,drop=F],vacc_status=Y_tr)
     
@@ -60,14 +61,21 @@ for (i in 2:n){
   }
 }
 
-# This indexes are the ones of the features from 
+colnames(data_preprocessed[,features_to_keep_2])
+# This indexes are the ones of the features from the dataset after removing 2 cols
+features_to_keep_2 <- features_to_keep_2 + 2
+tr_set <- read.csv("tr_set_imputed.csv", stringsAsFactors = T)
 
+colnames(tr_set[, features_to_keep_2])
 #select only the interresting columns for the output 2 and save it
-data_preprocessed_2<-subset(data_preprocessed, select = -c(features_to_throw_2))
+data_preprocessed_2<-subset(tr_set, select = c(2, features_to_keep_2))
 dim(data_preprocessed_2)
-
+colnames(data_preprocessed_2)
 write.csv(data_preprocessed_2, "tr_set_preprocessed_2.csv")
+ts_set <- read.csv("ts_set_imputed.csv", stringsAsFactors = T)
+ts_set_selected<-subset(ts_set, select = c(2, features_to_keep_2))
 
+write.csv(ts_set_selected, "ts_set_preprocessed_2.csv")
 
 
 
