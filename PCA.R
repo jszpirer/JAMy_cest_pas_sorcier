@@ -141,4 +141,4 @@ features_to_throw
 data_preprocessed_tot<-subset(data_preprocessed, select = -c(features_to_throw))
 dim(data_preprocessed_tot)
 
-write.csv(data_preprocessed_tot, "tr_set_preprocessed")
+write.csv(data_preprocessed_tot, "tr_set_preprocessed.csv")

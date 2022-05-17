@@ -1,5 +1,6 @@
 #install.packages("MultivariateRandomForest")
-training_features <- read.csv("tr_set_rf_imputed.csv")
+training_features <- read.csv("tr_set_preprocessed.csv")
+summary(training_features)
 training_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
 label_1 <- training_set_labels[,"h1n1_vaccine"]
 label_2 <- training_set_labels[, "seasonal_vaccine"]
@@ -30,7 +31,73 @@ testX <- as.matrix(test_data[,-targets])
 
 Prediction <- build_forest_predict(trainX, trainY, n_tree, m_feature, min_leaf,testX)
 Prediction
-# On met un threshold sur la prédiction pour avoir des 0 et des 1
-testY <- ifelse(Prediction > 0.5, 1, 0)
-confusion_matrix <- table(testY,test_data[,targets])
-confusion_matrix
+
+# ROC is a good indicator to see if the model works well
+thresholds <- seq(0,0.99,0.05)
+FPR <- c()
+TPR <- c()
+
+for(threshold in thresholds){
+  Y_hat <- ifelse(Prediction > threshold,1,0) 
+  confusion_matrix <- table(Y_hat[,2],test_data[,targets[1]])
+  
+  if(dim(confusion_matrix)[1] < 2){ 
+    if(rownames(confusion_matrix) == 0){
+      confusion_matrix <- rbind(confusion_matrix,c(0,0))
+      rownames(confusion_matrix)[2] <- 1
+    }
+    if(rownames(confusion_matrix) == 1){
+      confusion_matrix <- rbind(c(0,0),confusion_matrix)
+      rownames(confusion_matrix)[1] <- 0
+    }
+  }
+  
+  FP <- confusion_matrix[2,1]
+  TP <- confusion_matrix[2,2]
+  N_N <- sum(confusion_matrix[,1]) # Total number of 0's
+  N_P <- sum(confusion_matrix[,2]) # Total number of 1's
+  
+  FPR <- c(FPR,FP/N_N)
+  TPR <- c(TPR,TP/N_P)
+}
+
+
+plot(FPR,TPR)
+lines(FPR,TPR,col="blue")
+lines(thresholds,thresholds,lty=2)
+title("ROC Curve for seasonal vaccine")
+
+thresholds <- seq(0,0.99,0.05)
+FPR <- c()
+TPR <- c()
+
+
+for(threshold in thresholds){
+  Y_hat <- ifelse(Prediction > threshold,1,0) 
+  confusion_matrix <- table(Y_hat[,1],test_data[,targets[2]])
+  
+  if(dim(confusion_matrix)[1] < 2){ 
+    if(rownames(confusion_matrix) == 0){
+      confusion_matrix <- rbind(confusion_matrix,c(0,0))
+      rownames(confusion_matrix)[2] <- 1
+    }
+    if(rownames(confusion_matrix) == 1){
+      confusion_matrix <- rbind(c(0,0),confusion_matrix)
+      rownames(confusion_matrix)[1] <- 0
+    }
+  }
+  
+  FP <- confusion_matrix[2,1]
+  TP <- confusion_matrix[2,2]
+  N_N <- sum(confusion_matrix[,1]) # Total number of 0's
+  N_P <- sum(confusion_matrix[,2]) # Total number of 1's
+  
+  FPR <- c(FPR,FP/N_N)
+  TPR <- c(TPR,TP/N_P)
+}
+
+
+plot(FPR,TPR)
+lines(FPR,TPR,col="blue")
+lines(thresholds,thresholds,lty=2)
+title("ROC Curve for h1n1 vaccine")
