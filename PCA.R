@@ -8,7 +8,7 @@ training_set_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
 dim(training_set_labels)
 
 #setting parameters
-CV_folds <- 15
+CV_folds <- 10
 N<-nrow(data_preprocessed)
 n<-ncol(data_preprocessed)
 
@@ -32,7 +32,6 @@ for (i in 1:CV_folds) {
   Y_tr<-Y[idx_tr]
   
   for (nb_components in 1:n) {
-      print(paste("Component number", nb_components))
     # Create a dataset including only the first nb_components principal components
     DS<-cbind(X_tr[,1:nb_components,drop=F],vacc_status=Y_tr)
     
@@ -72,6 +71,7 @@ data_preprocessed_2<-subset(tr_set, select = c(2, features_to_keep_2))
 dim(data_preprocessed_2)
 colnames(data_preprocessed_2)
 write.csv(data_preprocessed_2, "tr_set_preprocessed_2.csv")
+
 ts_set <- read.csv("ts_set_imputed.csv", stringsAsFactors = T)
 ts_set_selected<-subset(ts_set, select = c(2, features_to_keep_2))
 
