@@ -114,3 +114,4 @@ tr_set_rf_imputed <- predict(ss, as.data.frame(tr_set_rf_imputed))
 summary(tr_set_rf_imputed)
 
 write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
+
