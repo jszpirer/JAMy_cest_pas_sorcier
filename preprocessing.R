@@ -260,26 +260,31 @@ features_set_int_encoded <- dummy_cols(features_set,
                                        ignore_na = F,
                                        remove_selected_columns = T)
 
+
+features_set_int_encoded <- replace_na_with_0(features_set_int_encoded)
+
 tr_set_enc <- features_set_int_encoded[tr_indexes,]
 ts_set_enc <- features_set_int_encoded[ts_indexes,]
+
 
 summary(features_set_int_encoded)
 
 dim(tr_set_enc)
 dim(ts_set_enc)
 
-### Normalize 
+write.csv(tr_set_enc, "tr_set_imputed.csv")
+write.csv(ts_set_enc, "ts_set_imputed.csv")
+
+### Normalize -> not needed anymore since done above
 # install.packages("caret")
-library("caret")
-
-ss <- preProcess(as.data.frame(tr_set_rf_imputed), method=c("range"))
-tr_set_rf_imputed <- predict(ss, as.data.frame(tr_set_rf_imputed))
-summary(tr_set_rf_imputed)
-
-
-write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
-
-
+# library("caret")
+# 
+# ss <- preProcess(as.data.frame(tr_set_rf_imputed), method=c("range"))
+# tr_set_rf_imputed <- predict(ss, as.data.frame(tr_set_rf_imputed))
+# summary(tr_set_rf_imputed)
+# 
+# 
+# write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
 
 
 ####################### OLD VERSION ############################################
@@ -288,8 +293,8 @@ write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
 ###############
 # Mtn que les données ont une forme exploitable on peut gérer les missing values
 # select which training set encoding to use (si on en a fait plusieurs)
-tr_set_encoded <- tr_set_int_encoding
-ts_set_encoded <- ts_set_int_encoding
+# tr_set_encoded <- tr_set_int_encoding
+# ts_set_encoded <- ts_set_int_encoding
 
 ## First try : replace with mean or frequent value
 
@@ -321,11 +326,11 @@ ts_set_encoded <- ts_set_int_encoding
 
 ### Normalize 
 # install.packages("caret")
-library("caret")
-
-ss <- preProcess(as.data.frame(tr_set_rf_imputed), method=c("range"))
-tr_set_rf_imputed <- predict(ss, as.data.frame(tr_set_rf_imputed))
-summary(tr_set_rf_imputed)
-
-
-write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
+# library("caret")
+# 
+# ss <- preProcess(as.data.frame(tr_set_rf_imputed), method=c("range"))
+# tr_set_rf_imputed <- predict(ss, as.data.frame(tr_set_rf_imputed))
+# summary(tr_set_rf_imputed)
+# 
+# 
+# write.csv(tr_set_rf_imputed, "tr_set_rf_imputed.csv")
