@@ -1,18 +1,50 @@
 # D'abord on met tout ensemble pour avoir un tableau avec features+labels
-total_training_features <- read.csv("tr_set_imputed.csv")
-training_features <- total_training_features[,c(4, 5, 6, 7, 9, 10, 13, 15, 16, 20, 21, 33, 34, 35, 37, 40)]
+#total_training_features <- read.csv("tr_set_preprocessed_2.csv")[-c(1)]
+#summary(total_training_features)
+#training_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
+#label_1 <- training_set_labels[,"h1n1_vaccine"]
+#label_2 <- training_set_labels[, "seasonal_vaccine"]
+#labels <- cbind(h1n1_vaccine=label_1, seasonal_vaccine=label_2)
+#labels
+#total_train_set <- cbind(total_training_features, labels)
+#summary(total_train_set)
+
+
+
+
+training_features <- read.csv("tr_set_imputed.csv")[, -c(1)]
 summary(training_features)
-training_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
+training_set_labels <- read.csv("training_set_labels.csv", stringsAsFactors = T)
 label_1 <- training_set_labels[,"h1n1_vaccine"]
 label_2 <- training_set_labels[, "seasonal_vaccine"]
 labels <- cbind(h1n1_vaccine=label_1, seasonal_vaccine=label_2)
-total_train_set <- cbind(training_features, labels)
+
+testing_features <- read.csv("ts_set_imputed.csv")[, -c(1)]
+feature_set <- rbind(training_features, testing_features)
+feature_set <- feature_set[, -c(1)] # remove resp id
+pca <- prcomp(feature_set)
+summary(pca)
+
+pca_feat_set <- pca$x[,1:54]
+
+# install.packages("caret")
+library("caret")
+
+ss <- preProcess(as.data.frame(pca_feat_set), method=c("range"))
+pca_feat_set <- predict(ss, as.data.frame(pca_feat_set))
+
+
+pca_tr_set <- pca_feat_set[1:26707,]
+pca_ts_set <- pca_feat_set[26708:53415,]
+total_train_set <- cbind(pca_tr_set, labels)
+summary(total_train_set)
+
 
 vaccine_idx <- sample(1:nrow(total_train_set))
 half_split <- floor(nrow(total_train_set)/2)
 train_data_set <- total_train_set[vaccine_idx[1:half_split],]
 test_data <- total_train_set[vaccine_idx[(half_split+1):nrow(total_train_set)],]
-target_idx <- ncol(train_data)
+target_idx <- ncol(train_data_set)
 targets <- c(target_idx, target_idx-1)
 
 # On peut lancer le modèle
@@ -113,7 +145,7 @@ for(threshold in thresholds){
   TPR <- c(TPR,TP/N_P)
 }
 
-
+plot.new()
 plot(FPR,TPR)
 lines(FPR,TPR,col="blue")
 lines(thresholds,thresholds,lty=2)
@@ -155,3 +187,4 @@ plot(FPR,TPR)
 lines(FPR,TPR,col="blue")
 lines(thresholds,thresholds,lty=2)
 title("ROC Curve for h1n1 vaccine")
+
