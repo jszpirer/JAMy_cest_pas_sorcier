@@ -11,7 +11,7 @@ results <- MRMR(X[, -c(1)], Y[, c(2)], 40, positive = T) # arbitrary number of c
 results$selection
 results$score
 
-results <- MRMR(X[, -c(1)], Y[, c(2)], 40, positive = T) # arbitrary number of cols to keep
+results <- MRMR(X[, -c(1)], Y[, c(3)], 40, positive = T) # arbitrary number of cols to keep
 results$selection
 length(results$score)
 
