@@ -188,3 +188,7 @@ lines(FPR,TPR,col="blue")
 lines(thresholds,thresholds,lty=2)
 title("ROC Curve for h1n1 vaccine")
 
+
+model <- lm(cbind(h1n1_vaccine, seasonal_vaccine)~., data=total_train_set)
+Y_pred <- predict(model,pca_ts_set)
+summary(model)
