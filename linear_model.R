@@ -144,7 +144,8 @@ for(threshold in thresholds){
   FPR <- c(FPR,FP/N_N)
   TPR <- c(TPR,TP/N_P)
 }
-
+FPR <- c(1, FPR, 0)
+TPR <- c(1, TPR, 0)
 plot.new()
 plot(FPR,TPR)
 lines(FPR,TPR,col="blue")
@@ -180,6 +181,8 @@ for(threshold in thresholds){
   FPR <- c(FPR,FP/N_N)
   TPR <- c(TPR,TP/N_P)
 }
+FPR <- c(1, FPR, 0)
+TPR <- c(1, TPR, 0)
 AUC <- sum(abs(diff(FPR)) * (head(TPR,-1)+tail(TPR,-1)))/2
 AUC
 
