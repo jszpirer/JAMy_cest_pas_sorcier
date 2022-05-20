@@ -1,6 +1,5 @@
 #opening files
-data_preprocessed <- read.csv("tr_set_imputed.csv", stringsAsFactors = T)
-data_preprocessed <- data_preprocessed[, -c(1,2)]  # Remove respondant id and automatic added column
+data_preprocessed <- read.csv("tr_set_rf_imputed.csv", stringsAsFactors = T)
 dim(data_preprocessed)
 
 
@@ -12,6 +11,7 @@ CV_folds <- 10
 N<-nrow(data_preprocessed)
 n<-ncol(data_preprocessed)
 
+
 size_CV <-floor(N/CV_folds)
 
 CV_err<-matrix(0,nrow=n,ncol=CV_folds)
@@ -22,7 +22,7 @@ Y<- training_set_labels[,2]
 X_pca<-data.frame(prcomp(data_preprocessed,retx=T)$x)
 
 for (i in 1:CV_folds) {
-    print(paste("Fold number", i))
+  
   idx_ts<-(((i-1)*size_CV+1):(i*size_CV))  ### idx_ts represents the indices of the test set the i-th fold
   X_ts<-X_pca[idx_ts,]
   Y_ts<-Y[idx_ts]
@@ -33,10 +33,10 @@ for (i in 1:CV_folds) {
   
   for (nb_components in 1:n) {
     # Create a dataset including only the first nb_components principal components
-    DS<-cbind(X_tr[,1:nb_components,drop=F],vacc_status=Y_tr)
+    DS<-cbind(X_tr[,1:nb_components,drop=F],imdb_score=Y_tr)
     
     # Model fit (using lm function)
-    model<- lm(vacc_status~.,DS)
+    model<- lm(imdb_score~.,DS)
     
     # Model predict
     Y_hat_ts<- predict(model,X_ts[,1:nb_components,drop=F])
@@ -48,7 +48,7 @@ for (i in 1:CV_folds) {
 CV_error_mean_2 <- round(apply(CV_err,1,mean),digits=4)
 
 
-features_to_keep_2<-c()
+features_to_keep_2<-c(1)
 features_to_throw_2<-c()
 for (i in 2:n){
   a<-CV_error_mean_2 [i-1]-CV_error_mean_2[i]
@@ -60,22 +60,13 @@ for (i in 2:n){
   }
 }
 
-colnames(data_preprocessed[,features_to_keep_2])
-# This indexes are the ones of the features from the dataset after removing 2 cols
-features_to_keep_2 <- features_to_keep_2 + 2
-tr_set <- read.csv("tr_set_imputed.csv", stringsAsFactors = T)
 
-colnames(tr_set[, features_to_keep_2])
 #select only the interresting columns for the output 2 and save it
-data_preprocessed_2<-subset(tr_set, select = c(2, features_to_keep_2))
+data_preprocessed_2<-subset(data_preprocessed, select = -c(features_to_throw_2))
 dim(data_preprocessed_2)
-colnames(data_preprocessed_2)
-write.csv(data_preprocessed_2, "tr_set_preprocessed_2.csv")
 
-ts_set <- read.csv("ts_set_imputed.csv", stringsAsFactors = T)
-ts_set_selected<-subset(ts_set, select = c(2, features_to_keep_2))
+write.csv(data_preprocessed_2, "tr_set_preprocessed_2")
 
-write.csv(ts_set_selected, "ts_set_preprocessed_2.csv")
 
 
 
